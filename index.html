@@ -282,7 +282,7 @@
     async function discover() {
       state.textContent = "Loading";
       title.textContent = "Finding tracks";
-      const res = await fetch("https://api.github.com/repos/lukaweba19-cell/Bushra/contents/?ref=main", {
+      const res = await fetch("https://api.github.com/repos/Solos-Recording/Quite-Misery/contents/?ref=main", {
         headers: { Accept: "application/vnd.github+json" }
       });
       if (!res.ok) throw new Error("Could not list files");
