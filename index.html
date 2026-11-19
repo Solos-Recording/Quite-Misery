@@ -514,31 +514,37 @@
       color: #000;
     }
 
-    /* Lyrics */
+    /* Lyrics card */
     .lyrics-section {
       flex: 1 1 0;
       min-height: 0;
-      border-top: 1px solid var(--border);
-      padding-top: 12px;
+      margin-top: 2px;
+      padding: 14px 16px 10px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(29, 185, 84, 0.16) 0%, rgba(29, 185, 84, 0.05) 42%, rgba(255, 255, 255, 0.03) 100%),
+        var(--bg-card);
+      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
     }
 
     .lyrics-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 12px;
+      gap: 12px;
+      margin-bottom: 6px;
       flex-shrink: 0;
     }
 
     .lyrics-title {
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--text-sub);
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: var(--text);
     }
 
     .lyrics-body {
@@ -547,28 +553,31 @@
       position: relative;
       overflow-y: auto;
       overscroll-behavior: contain;
-      padding-right: 6px;
+      padding: 0 4px;
       scroll-behavior: smooth;
-      mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
-      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
+      mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
     }
 
     .lyrics-body::-webkit-scrollbar { width: 4px; }
     .lyrics-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 2px; }
 
+    /* Spacers let the first/last line sit dead centre without padding the
+       scroll box (padding would stop the box from ever shrinking). */
+    .lyrics-pad { pointer-events: none; }
+
     .lyrics-line {
       font-size: 18px;
-      line-height: 1.7;
+      line-height: 1.65;
       color: var(--text-muted);
-      padding: 6px 0;
-      transition: color 0.25s ease, transform 0.25s ease, font-weight 0.2s;
+      padding: 8px 0;
+      transition: color 0.25s ease, font-weight 0.2s;
       cursor: default;
     }
 
     .lyrics-line.active {
       color: var(--accent);
-      font-weight: 600;
-      transform: scale(1.02);
+      font-weight: 700;
     }
 
     .lyrics-line.past {
@@ -751,9 +760,10 @@
       .np-controls .play-btn svg { width: 18px; height: 18px; }
       .np-controls .ctrl-btn svg { width: 18px; height: 18px; }
       .np-header { padding: 10px 16px 4px; padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
-      .lyrics-section { padding-top: 8px; }
-      .lyrics-header { margin-bottom: 8px; }
-      .lyrics-line { font-size: 16px; line-height: 1.55; padding: 4px 0; }
+      .lyrics-section { padding: 10px 12px 8px; border-radius: 16px; }
+      .lyrics-header { margin-bottom: 4px; }
+      .lyrics-title { font-size: 15px; }
+      .lyrics-line { font-size: 16px; line-height: 1.55; padding: 5px 0; }
     }
 
     /* Landscape / very short: drop the artwork entirely, lyrics win the space */
@@ -771,8 +781,9 @@
       .np-header { padding: 6px 14px 2px; padding-top: calc(6px + env(safe-area-inset-top, 0px)); }
       .np-header-title { font-size: 11px; }
       .np-times { font-size: 11px; margin-top: 4px; }
-      .lyrics-section { padding-top: 6px; }
-      .lyrics-line { font-size: 15px; }
+      .lyrics-section { padding: 8px 12px 6px; border-radius: 14px; margin-top: 0; }
+      .lyrics-title { font-size: 13px; }
+      .lyrics-line { font-size: 15px; line-height: 1.5; padding: 4px 0; }
     }
   </style>
 </head>
@@ -1027,14 +1038,14 @@
     // included) can sit exactly in the middle of the box at any screen size.
     function sizeLyricsViewport() {
       const half = Math.round(lyricsBody.clientHeight / 2);
-      lyricsBody.style.paddingTop = half + "px";
-      lyricsBody.style.paddingBottom = half + "px";
+      const top = lyricsBody.querySelector('[data-pad="top"]');
+      const bottom = lyricsBody.querySelector('[data-pad="bottom"]');
+      if (top) top.style.height = half + "px";
+      if (bottom) bottom.style.height = half + "px";
     }
 
     function renderLyrics() {
       if (!lyricsLines.length) {
-        lyricsBody.style.paddingTop = "";
-        lyricsBody.style.paddingBottom = "";
         lyricsBody.innerHTML = `
           <div class="lyrics-placeholder">
             No lyrics available for this track.<br><br>
@@ -1045,11 +1056,38 @@
         return;
       }
 
-      lyricsBody.innerHTML = lyricsLines
-        .map((l, i) => `<div class="lyrics-line" data-index="${i}">${l.text}</div>`)
-        .join("");
+      lyricsBody.innerHTML =
+        '<div class="lyrics-pad" data-pad="top"></div>' +
+        lyricsLines.map((l, i) => `<div class="lyrics-line" data-index="${i}">${l.text}</div>`).join("") +
+        '<div class="lyrics-pad" data-pad="bottom"></div>';
       activeLyricIndex = -1;
       sizeLyricsViewport();
+      // Lyrics can arrive after playback started, so sync straight away
+      if (isExpanded && audio.currentTime > 0) updateActiveLyric(audio.currentTime);
+    }
+
+    // Keeps the highlighted line in the middle of the lyrics card. It runs on
+    // every time update, so if a scroll is ever dropped (or the card resizes)
+    // it re-centres on the next tick instead of letting the line slide off screen.
+    function centerActiveLyric(force) {
+      if (activeLyricIndex < 0 || !lyricsLines.length) return;
+      const nodes = lyricsBody.querySelectorAll(".lyrics-line");
+      const line = nodes[activeLyricIndex];
+      if (!line) return;
+
+      const viewH = lyricsBody.clientHeight;
+      if (!viewH) return;
+
+      const containerRect = lyricsBody.getBoundingClientRect();
+      const lineRect = line.getBoundingClientRect();
+      const offset = (lineRect.top + lineRect.height / 2) - (containerRect.top + viewH / 2);
+
+      // Already near the middle? Leave it alone so the text never twitches.
+      if (!force && Math.abs(offset) < viewH * 0.15) return;
+
+      const maxScroll = Math.max(0, lyricsBody.scrollHeight - viewH);
+      const target = Math.max(0, Math.min(maxScroll, lyricsBody.scrollTop + offset));
+      lyricsBody.scrollTo({ top: target, behavior: force ? "auto" : "smooth" });
     }
 
     function updateActiveLyric(currentTime) {
@@ -1064,32 +1102,20 @@
         }
       }
 
-      if (newIndex === activeLyricIndex) return;
-      activeLyricIndex = newIndex;
-
-      const nodes = lyricsBody.querySelectorAll(".lyrics-line");
-      nodes.forEach((node, i) => {
-        node.classList.remove("active", "past");
-        if (i === newIndex) {
-          node.classList.add("active");
-        } else if (i < newIndex) {
-          node.classList.add("past");
-        }
-      });
-
-      // Scroll just enough to keep the active line centered in the lyrics box
-      if (newIndex >= 0 && nodes[newIndex]) {
-        const container = lyricsBody;
-        const line = nodes[newIndex];
-        const containerRect = container.getBoundingClientRect();
-        const lineRect = line.getBoundingClientRect();
-        const lineTopInContainer = (lineRect.top - containerRect.top) + container.scrollTop;
-        const targetScroll = lineTopInContainer - (container.clientHeight / 2) + (lineRect.height / 2);
-        container.scrollTo({
-          top: Math.max(0, targetScroll),
-          behavior: "smooth"
+      if (newIndex !== activeLyricIndex) {
+        activeLyricIndex = newIndex;
+        const nodes = lyricsBody.querySelectorAll(".lyrics-line");
+        nodes.forEach((node, i) => {
+          node.classList.remove("active", "past");
+          if (i === newIndex) {
+            node.classList.add("active");
+          } else if (i < newIndex) {
+            node.classList.add("past");
+          }
         });
       }
+
+      centerActiveLyric(false);
     }
 
     async function loadLyrics(trackTitle) {
@@ -1242,6 +1268,16 @@
 
     audio.addEventListener("ended", () => load(index + 1, true));
 
+    // Anything that can knock the lyrics out of place snaps back to the centre
+    nowPlayingView.addEventListener("transitionend", (e) => {
+      if (e.target === nowPlayingView && isExpanded) centerActiveLyric(true);
+    });
+    audio.addEventListener("seeked", () => {
+      sizeLyricsViewport();
+      centerActiveLyric(true);
+    });
+    audio.addEventListener("loadedmetadata", () => sizeLyricsViewport());
+
     // Re-fit the lyrics box whenever the viewport changes (rotate, keyboard, resize)
     let refitRaf = 0;
     function refitLyrics() {
@@ -1251,6 +1287,7 @@
         if (isExpanded && lyricsLines.length) {
           activeLyricIndex = -1;
           updateActiveLyric(audio.currentTime);
+          centerActiveLyric(true);
         }
       });
     }
