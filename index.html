@@ -555,15 +555,15 @@
       overscroll-behavior: contain;
       padding: 0 4px;
       scroll-behavior: smooth;
-      mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
-      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+      mask-image: linear-gradient(to bottom, black 0%, black 88%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, black 0%, black 88%, transparent 100%);
     }
 
     .lyrics-body::-webkit-scrollbar { width: 4px; }
     .lyrics-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 2px; }
 
-    /* Spacers let the first/last line sit dead centre without padding the
-       scroll box (padding would stop the box from ever shrinking). */
+    /* Bottom spacer only: the lyrics start flush at the top of the card, and the
+       tail still has room to scroll the last lines up to the middle. */
     .lyrics-pad { pointer-events: none; }
 
     .lyrics-line {
@@ -1038,9 +1038,7 @@
     // included) can sit exactly in the middle of the box at any screen size.
     function sizeLyricsViewport() {
       const half = Math.round(lyricsBody.clientHeight / 2);
-      const top = lyricsBody.querySelector('[data-pad="top"]');
       const bottom = lyricsBody.querySelector('[data-pad="bottom"]');
-      if (top) top.style.height = half + "px";
       if (bottom) bottom.style.height = half + "px";
     }
 
@@ -1057,7 +1055,6 @@
       }
 
       lyricsBody.innerHTML =
-        '<div class="lyrics-pad" data-pad="top"></div>' +
         lyricsLines.map((l, i) => `<div class="lyrics-line" data-index="${i}">${l.text}</div>`).join("") +
         '<div class="lyrics-pad" data-pad="bottom"></div>';
       activeLyricIndex = -1;
