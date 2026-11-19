@@ -438,6 +438,12 @@
       width: 100%;
     }
 
+    .np-top {
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
     .np-cover-wrap {
       display: flex;
       justify-content: center;
@@ -446,8 +452,8 @@
     }
 
     .np-cover {
-      width: min(300px, 72vw, 30vh);
-      height: min(300px, 72vw, 30vh);
+      width: min(300px, 72vw, 32vh);
+      height: min(300px, 72vw, 32vh);
       border-radius: 12px;
       object-fit: cover;
       box-shadow: 0 20px 50px rgba(0,0,0,0.55);
@@ -542,7 +548,6 @@
       overflow-y: auto;
       overscroll-behavior: contain;
       padding-right: 6px;
-      padding-bottom: 40%;
       scroll-behavior: smooth;
       mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
       -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
@@ -716,6 +721,59 @@
       .np-title { font-size: 20px; }
       .lyrics-line { font-size: 16px; padding: 5px 0; }
     }
+
+    /* ===== Height fitting: the panel always fits, lyrics always stay on screen ===== */
+    @media (max-height: 780px) {
+      .np-cover-wrap { margin: 2px 0 10px; }
+      .np-cover { width: min(260px, 64vw, 28vh); height: min(260px, 64vw, 28vh); }
+      .np-meta { margin-bottom: 10px; }
+      .np-controls { margin: 6px 0 10px; }
+      .np-controls .play-btn { width: 50px; height: 50px; }
+      .np-controls .play-btn svg { width: 20px; height: 20px; }
+    }
+
+    /* Short screens: cover moves beside the title so the lyrics keep real space */
+    @media (max-height: 640px) {
+      .np-top { flex-direction: row; align-items: center; gap: 12px; margin-bottom: 8px; }
+      .np-cover-wrap { margin: 0; }
+      .np-cover {
+        width: min(84px, 20vw, 18vh);
+        height: min(84px, 20vw, 18vh);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      }
+      .np-meta { margin-bottom: 0; min-width: 0; }
+      .np-title { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .np-artist { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .np-progress { margin-bottom: 6px; }
+      .np-controls { margin: 4px 0 8px; gap: 22px; }
+      .np-controls .play-btn { width: 46px; height: 46px; }
+      .np-controls .play-btn svg { width: 18px; height: 18px; }
+      .np-controls .ctrl-btn svg { width: 18px; height: 18px; }
+      .np-header { padding: 10px 16px 4px; padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
+      .lyrics-section { padding-top: 8px; }
+      .lyrics-header { margin-bottom: 8px; }
+      .lyrics-line { font-size: 16px; line-height: 1.55; padding: 4px 0; }
+    }
+
+    /* Landscape / very short: drop the artwork entirely, lyrics win the space */
+    @media (max-height: 460px) {
+      .np-cover-wrap { display: none; }
+      .np-body { padding: 0 16px calc(6px + env(safe-area-inset-bottom, 0px)); }
+      .np-title { font-size: 16px; }
+      .np-artist { font-size: 12px; }
+      .np-progress { margin-bottom: 4px; }
+      .np-controls { margin: 2px 0 6px; gap: 18px; }
+      .np-controls .play-btn { width: 40px; height: 40px; }
+      .np-controls .play-btn svg { width: 16px; height: 16px; }
+      .np-controls .ctrl-btn { padding: 6px; }
+      .np-controls .ctrl-btn svg { width: 16px; height: 16px; }
+      .np-header { padding: 6px 14px 2px; padding-top: calc(6px + env(safe-area-inset-top, 0px)); }
+      .np-header-title { font-size: 11px; }
+      .np-times { font-size: 11px; margin-top: 4px; }
+      .lyrics-section { padding-top: 6px; }
+      .lyrics-line { font-size: 15px; }
+    }
   </style>
 </head>
 <body>
@@ -805,13 +863,15 @@
     </div>
 
     <div class="np-body">
-      <div class="np-cover-wrap">
-        <img class="np-cover" id="npCover" src="https://raw.githubusercontent.com/Solos-Recording/Quite-Misery/main/art.png" alt="" />
-      </div>
+      <div class="np-top">
+        <div class="np-cover-wrap">
+          <img class="np-cover" id="npCover" src="https://raw.githubusercontent.com/Solos-Recording/Quite-Misery/main/art.png" alt="" />
+        </div>
 
-      <div class="np-meta">
-        <div class="np-title" id="npTitle">—</div>
-        <div class="np-artist">SoloDoloSouls</div>
+        <div class="np-meta">
+          <div class="np-title" id="npTitle">—</div>
+          <div class="np-artist">SoloDoloSouls</div>
+        </div>
       </div>
 
       <div class="np-progress">
@@ -908,6 +968,7 @@
       nowPlayingView.classList.add("open");
       document.body.style.overflow = "hidden";
       // Snap the lyrics to the current line now that the sheet has a size
+      sizeLyricsViewport();
       activeLyricIndex = -1;
       updateActiveLyric(audio.currentTime);
     }
@@ -962,8 +1023,18 @@
       return lines;
     }
 
+    // Half a lyrics-box of padding top and bottom, so any line (first or last
+    // included) can sit exactly in the middle of the box at any screen size.
+    function sizeLyricsViewport() {
+      const half = Math.round(lyricsBody.clientHeight / 2);
+      lyricsBody.style.paddingTop = half + "px";
+      lyricsBody.style.paddingBottom = half + "px";
+    }
+
     function renderLyrics() {
       if (!lyricsLines.length) {
+        lyricsBody.style.paddingTop = "";
+        lyricsBody.style.paddingBottom = "";
         lyricsBody.innerHTML = `
           <div class="lyrics-placeholder">
             No lyrics available for this track.<br><br>
@@ -978,6 +1049,7 @@
         .map((l, i) => `<div class="lyrics-line" data-index="${i}">${l.text}</div>`)
         .join("");
       activeLyricIndex = -1;
+      sizeLyricsViewport();
     }
 
     function updateActiveLyric(currentTime) {
@@ -1169,6 +1241,22 @@
     });
 
     audio.addEventListener("ended", () => load(index + 1, true));
+
+    // Re-fit the lyrics box whenever the viewport changes (rotate, keyboard, resize)
+    let refitRaf = 0;
+    function refitLyrics() {
+      cancelAnimationFrame(refitRaf);
+      refitRaf = requestAnimationFrame(() => {
+        sizeLyricsViewport();
+        if (isExpanded && lyricsLines.length) {
+          activeLyricIndex = -1;
+          updateActiveLyric(audio.currentTime);
+        }
+      });
+    }
+    window.addEventListener("resize", refitLyrics);
+    window.addEventListener("orientationchange", refitLyrics);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", refitLyrics);
 
     document.addEventListener("keydown", (e) => {
       if (e.code === "Space" && e.target.tagName !== "INPUT") {
